@@ -1,9 +1,15 @@
+import java.util.Objects;
+
 public class Main {
 
-    // Classe auxiliar para armazenar o resultado: texto final e posição do cursor.
-    public static class Result {
-        public String text;
-        public int cursor;
+    // Constantes para os comandos
+    private static final char CMD_MOVE_LEFT = 'h';
+    private static final char CMD_MOVE_RIGHT = 'l';
+    private static final char CMD_REPLACE = 'r';
+
+    private static class Result {
+        private final String text;
+        private final int cursor;
 
         public Result(String text, int cursor) {
             this.text = text;
@@ -19,6 +25,11 @@ public class Main {
         }
 
         @Override
+        public int hashCode() {
+            return Objects.hash(text, cursor);
+        }
+
+        @Override
         public String toString() {
             return text + " - cursor: " + cursor;
         }
@@ -26,13 +37,6 @@ public class Main {
 
     /**
      * Processa os comandos de manipulação de texto.
-     *
-     * Comandos:
-     *  - h: move o cursor para a esquerda.
-     *  - l: move o cursor para a direita.
-     *  - r: substitui o(s) caractere(s) na posição atual pelo caractere que vem logo após o 'r'.
-     *
-     * Cada comando pode vir precedido de um número que indica a quantidade. Se não houver número, o valor padrão é 1.
      *
      * @param inputText Texto de entrada.
      * @param commands  Comandos para manipulação.
@@ -60,33 +64,22 @@ public class Main {
             i++;
 
             switch (command) {
-                case 'h':
-                    // Move o cursor para a esquerda, sem sair dos limites
-                    cursor = Math.max(cursor - count, 0);
+                case CMD_MOVE_LEFT:
+                    cursor = moveCursorLeft(cursor, count);
                     break;
-                case 'l':
-                    // Move o cursor para a direita, sem exceder o tamanho do texto
-                    cursor = Math.min(cursor + count, text.length() - 1);
+                case CMD_MOVE_RIGHT:
+                    cursor = moveCursorRight(cursor, count, text.length());
                     break;
-                case 'r':
-                    // O próximo caractere é o de substituição
+                case CMD_REPLACE:
                     if (i >= commands.length()) break;
                     char replacement = commands.charAt(i);
                     i++;
-
-                    if (count == 1) {
-                        text.setCharAt(cursor, replacement);
-                    } else {
-                        int end = Math.min(cursor + count, text.length());
-                        for (int j = cursor; j < end; j++) {
-                            text.setCharAt(j, replacement);
-                        }
-                        // Após a substituição, reposiciona o cursor no último caractere modificado
-                        cursor = end - 1;
-                    }
+                    text = replaceCharacters(text, cursor, count, replacement);
+                    // Reposiciona o cursor no último caractere modificado
+                    cursor = Math.min(cursor + count, text.length()) - 1;
                     break;
                 default:
-                    // Comando não reconhecido, ignora.
+                    System.out.println("Comando não reconhecido: " + command);
                     break;
             }
         }
@@ -95,8 +88,32 @@ public class Main {
     }
 
     /**
+     * Move o cursor para a esquerda.
+     */
+    private static int moveCursorLeft(int cursor, int count) {
+        return Math.max(cursor - count, 0);
+    }
+
+    /**
+     * Move o cursor para a direita.
+     */
+    private static int moveCursorRight(int cursor, int count, int textLength) {
+        return Math.min(cursor + count, textLength - 1);
+    }
+
+    /**
+     * Substitui os caracteres a partir da posição do cursor.
+     */
+    private static StringBuilder replaceCharacters(StringBuilder text, int cursor, int count, char replacement) {
+        int end = Math.min(cursor + count, text.length());
+        for (int j = cursor; j < end; j++) {
+            text.setCharAt(j, replacement);
+        }
+        return text;
+    }
+
+    /**
      * Método de teste customizado.
-     * Compara o resultado obtido com o resultado esperado.
      */
     public static void test(String inputText, String commands, String expectedText, int expectedCursor) {
         Result result = process(inputText, commands);
@@ -113,20 +130,12 @@ public class Main {
     public static void main(String[] args) {
         // Execução dos testes com os exemplos fornecidos
 
-        // Teste 1:
-        test("Hello Grupo Boticario", "hhlllllhlhhl", "Hello Grupo Boticario", 3);
-
-        // Teste 2:
-        test("Hello Grupo Boticario", "rhllllllrgllllllrb", "hello grupo boticario", 12);
-
-        // Teste 3:
-        test("Hello Grupo Boticario", "rh6lrg6lrb2h", "hello grupo boticario", 10);
-
-        // Teste 4:
-        test("Hello Grupo Boticario", "9999lrO", "Hello Grupo BoticariO", 20);
-
-        // Teste 5:
-        test("Hello Grupo Boticario", "21rA", "AAAAAAAAAAAAAAAAAAAAA", 20);
+        String inputText = "Hello Grupo Boticario";
+        test(inputText, "hhlllllhlhhl", inputText, 4);
+        test(inputText, "rhllllllrgllllllrb", "hello grupo boticario", 12);
+        test(inputText, "rh6lrg6lrb2h", "hello grupo boticario", 10);
+        test(inputText, "9999lrO", "Hello Grupo BoticariO", 20);
+        test(inputText, "21rA", "AAAAAAAAAAAAAAAAAAAAA", 20);
 
         System.out.println("Todos os testes passaram.");
     }
